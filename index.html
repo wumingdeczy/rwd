@@ -287,6 +287,27 @@
             text-align: center;
         }
         
+        .github-status {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+        
+        .github-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .github-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -345,6 +366,8 @@
                 提示：按空格键可以开始/停止抽奖
             </div>
             
+            <div id="githubStatus" class="github-status"></div>
+            
             <div class="result-history">
                 <h3>抽奖记录</h3>
                 <div id="resultList">
@@ -366,6 +389,19 @@
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
             const resultList = document.getElementById('resultList');
+            const githubStatus = document.getElementById('githubStatus');
+            
+            // GitHub配置 - 需要修改为你的实际信息
+            const GITHUB_CONFIG = {
+                // 替换为你的用户名
+                username: 'wumingdeczy',
+                // 替换为你的仓库名
+                repo: 'rwd',
+                // 替换为你的文件名
+                filePath: 'lottery_results.txt',
+                // 替换为你的Personal Access Token
+                token: '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'
+            };
             
             // 抽奖状态变量
             let isDrawing = false;
@@ -462,6 +498,9 @@
                 const result = lotteryDisplay.textContent;
                 results.push(result);
                 renderResults();
+                
+                // 保存结果到GitHub
+                saveResultToGitHub(result);
             }
             
             // 渲染抽奖结果
@@ -481,6 +520,78 @@
                     `;
                     resultList.appendChild(resultItem);
                 });
+            }
+            
+            // 保存结果到GitHub
+            async function saveResultToGitHub(result) {
+                try {
+                    showGitHubStatus('正在保存到GitHub...', 'info');
+                    
+                    // 获取当前文件内容
+                    const fileResponse = await fetch(
+                        `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.filePath}`,
+                        {
+                            headers: {
+                                'Authorization': `token ${GITHUB_CONFIG.token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        }
+                    );
+                    
+                    let currentContent = '';
+                    let sha = '';
+                    
+                    if (fileResponse.ok) {
+                        const fileData = await fileResponse.json();
+                        currentContent = atob(fileData.content); // 解码base64内容
+                        sha = fileData.sha;
+                    }
+                    
+                    // 添加新结果
+                    const timestamp = new Date().toLocaleString('zh-CN');
+                    const newContent = currentContent + `[${timestamp}] 中奖结果: ${result}\n`;
+                    
+                    // 更新文件
+                    const updateResponse = await fetch(
+                        `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.filePath}`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${GITHUB_CONFIG.token}`,
+                                'Accept': 'application/vnd.github.v3+json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                message: `添加抽奖结果: ${result}`,
+                                content: btoa(unescape(encodeURIComponent(newContent))), // 编码为base64
+                                sha: sha
+                            })
+                        }
+                    );
+                    
+                    if (updateResponse.ok) {
+                        showGitHubStatus('结果已成功保存到GitHub！', 'success');
+                    } else {
+                        throw new Error('更新文件失败');
+                    }
+                    
+                } catch (error) {
+                    console.error('保存到GitHub失败:', error);
+                    showGitHubStatus('保存到GitHub失败，请检查配置', 'error');
+                }
+            }
+            
+            // 显示GitHub状态
+            function showGitHubStatus(message, type) {
+                githubStatus.textContent = message;
+                githubStatus.className = 'github-status';
+                githubStatus.classList.add(type);
+                githubStatus.style.display = 'block';
+                
+                // 3秒后隐藏
+                setTimeout(() => {
+                    githubStatus.style.display = 'none';
+                }, 3000);
             }
             
             // 键盘事件监听
