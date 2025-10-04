@@ -1,0 +1,32 @@
+name: Lottery Result Logger 
+on:
+  repository_dispatch:
+    types: [lottery]
+ 
+jobs:
+  log-result:
+    runs-on: ubuntu-latest 
+    steps:
+      - uses: actions/checkout@v4 
+        with:
+          fetch-depth: 0 
+ 
+      - name: 验证输入 
+        run: |
+          if [ -z "${{ github.event.client_payload.result  }}" ]; then 
+            echo "错误：结果参数为空"
+            exit 1 
+          fi 
+ 
+      - name: 记录结果 
+        run: |
+          echo "[${{ github.event.client_payload.timestamp  }}] ${{ github.event.client_payload.result  }}" >> lottery_results.txt  
+          echo "记录成功：${{ github.event.client_payload.result  }}"
+ 
+      - name: 提交更改 
+        run: |
+          git config --global user.name  "GitHub Actions"
+          git config --global user.email  "actions@github.com" 
+          git add lottery_results.txt  
+          git commit -m "记录抽奖结果: ${{ github.event.client_payload.result  }}"
+          git push 
