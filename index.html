@@ -509,11 +509,11 @@
                     showGitHubStatus('正在保存结果...', 'info');
                     
                     const response = await fetch(
-                        `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/dispatches`, 
+                        `https://api.github.com/repos/${GITHUB_CONFIG.username}/${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}/dispatches`, 
                         {
                             method: "POST",
                             headers: {
-                                "Authorization": `token ${GITHUB_CONFIG.token}`, 
+                                "Authorization": `token ${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}`, 
                                 "Accept": "application/vnd.github.v3+json", 
                                 "Content-Type": "application/json"
                             },
